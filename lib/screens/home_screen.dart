@@ -375,7 +375,7 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
             title: Text(
-              'Password Vault',
+              '🔑CredVault',
               style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
