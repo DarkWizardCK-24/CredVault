@@ -24,3 +24,7 @@ DeckNote is a beautiful and modern to-do app built with Flutter, designed to mak
 
 
 DeckNote 📝 - Swipe your tasks, stay productive, and enjoy the journey! 🚀
+
+
+
+Crafted with 💼 by DarkWizardCK
