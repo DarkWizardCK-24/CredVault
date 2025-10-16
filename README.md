@@ -1,30 +1,30 @@
-# DeckNote 📝✨
+# CredVault 🔒🪞
 
-DeckNote is a beautiful and modern to-do app built with Flutter, designed to make task management both fun and efficient. With a sleek card swiper interface, users can create, organize, and swipe through tasks effortlessly. Integrated with Firebase Authentication for secure user login and Firebase Firestore for real-time data sync, DeckNote offers a seamless, cross-platform experience on Android, iOS, and web. The app features a stunning glassmorphic UI, animations, and a highly intuitive design to keep you productive and engaged.
+CredVault is a secure and elegant Flutter app designed to store and manage your credentials with ease. Built with Firebase Authentication 🔥 for secure user login and Firestore for real-time data storage, CredVault offers a beautiful glassmorphic UI and intuitive features like copy-to-clipboard 📋 and platform/URL linking. Whether you're managing passwords or sensitive data, CredVault ensures security and style across Android 📱, iOS 🍎, and web 💻.
 
 # ✨ Features
 
-1. Card Swiper Interface 🃏: Swipe through tasks with a Tinder-like card interface for a fun and interactive experience.
-2. Firebase Authentication 🔥: Secure user authentication with email, Google, or anonymous login.
-3. Real-Time Database 📊: Sync tasks instantly with Firebase Firestore for a seamless experience across devices.
-4. Glassmorphic UI 🪞: Beautiful, modern design with glassmorphism effects for a premium look and feel.
-5. Task Management ✅: Create, edit, delete, and categorize tasks with ease.
-6. Cross-Platform Support 🌐: Runs smoothly on Android, iOS, and web platforms.
-7. Animations & Transitions 🎉: Smooth animations for swiping, task completion, and UI interactions.
-8. Offline Support 📴: Manage tasks offline with automatic syncing when online.
+1. Secure Credential Storage 🔒: Safely store usernames, passwords, and other sensitive data.
+2. Firebase Authentication 🔥: Secure login with email, Google, or anonymous options.
+3. Real-Time Data Sync 📊: Sync credentials instantly with Firebase Firestore.
+4. Glassmorphic UI 🪞: Stunning frosted-glass design with smooth animations.
+5. Copy-to-Clipboard 📋: Easily copy credentials with a single tap.
+6. Platform/URL Linking 🔗: Associate credentials with platform URLs for quick access.
+7. FontAwesome Icons 🎨: Polished, professional icons for a premium look.
+8. Cross-Platform Support 🌐: Runs seamlessly on Android, iOS, and web.
+
 
 # 🛠️ Tech Stack
 
 1. Flutter 🦋: Cross-platform framework for building the UI.
 2. Firebase Authentication 🔥: Secure user authentication.
-3. Firebase Firestore 📊: Real-time database for task storage and sync.
+3. Firebase Firestore 📊: Real-time database for credential storage.
 4. Glassmorphism 🪞: UI package for glassmorphic design.
-5. Font Awesome Flutter 🎨: Icons for a polished look.
-6. Card Swiper 🃏: Package for swipeable card interface.
+5. Font Awesome Flutter 🎨: Professional icons for enhanced visuals.
+6. Clipboard 📋: Flutter plugin for copy-to-clipboard functionality.
 
 
-DeckNote 📝 - Swipe your tasks, stay productive, and enjoy the journey! 🚀
 
-
+CredVault 🔒 – Securely store, swipe, and manage your credentials with style! 🚀
 
 Crafted with 💼 by DarkWizardCK
