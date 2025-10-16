@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "819631877981",
+    "project_id": "cred-vault-6bf20",
+    "storage_bucket": "cred-vault-6bf20.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:819631877981:android:6c579339ea54a5351d42b4",
+        "android_client_info": {
+          "package_name": "com.example.cred_vault"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCD6O2axgPutyOHMDV358FZOv_NXi5NIFA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
