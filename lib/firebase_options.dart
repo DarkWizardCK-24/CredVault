@@ -71,12 +71,12 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyDEsKZq3QgqVuAIWvrn-5uuJsElzXPMQjg',
-    appId: '1:819631877981:web:b6c5994304e9b6981d42b4',
+    apiKey: 'AIzaSyByPdhjIqWecc5Wr6CAF_tv1aX17Fi_vcA',
+    appId: '1:819631877981:web:b991870d921947af1d42b4',
     messagingSenderId: '819631877981',
     projectId: 'cred-vault-6bf20',
     authDomain: 'cred-vault-6bf20.firebaseapp.com',
     storageBucket: 'cred-vault-6bf20.firebasestorage.app',
-    measurementId: 'G-3YS3DNRFFT',
+    measurementId: 'G-BM4WPBY4E3',
   );
 }
