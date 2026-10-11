@@ -1,48 +1,48 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// The signed-in user's profile (never contains anything secret).
 class UserModel {
-  final String userId;
+  /// Firebase Authentication uid.
+  final String uid;
   final String name;
   final String email;
   final DateTime createdAt;
 
-  UserModel({
-    required this.userId,
+  /// The id earlier versions used (e.g. `USER000012`). Only kept so
+  /// credentials saved by those versions can be migrated.
+  final String? legacyUserId;
+
+  const UserModel({
+    required this.uid,
     required this.name,
     required this.email,
     required this.createdAt,
+    this.legacyUserId,
   });
 
+  UserModel copyWith({String? name}) => UserModel(
+    uid: uid,
+    name: name ?? this.name,
+    email: email,
+    createdAt: createdAt,
+    legacyUserId: legacyUserId,
+  );
+
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+    final data = (doc.data() as Map<String, dynamic>?) ?? const {};
+    final legacy = data['userId'] as String?;
     return UserModel(
-      userId: data['userId'] ?? '',
-      name: data['name'] ?? '',
-      email: data['email'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      uid: doc.id,
+      name: data['name'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      legacyUserId: (legacy != null && legacy != doc.id) ? legacy : null,
     );
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'userId': userId,
-      'name': name,
-      'email': email,
-      'createdAt': Timestamp.fromDate(createdAt),
-    };
-  }
-
-  UserModel copyWith({
-    String? userId,
-    String? name,
-    String? email,
-    DateTime? createdAt,
-  }) {
-    return UserModel(
-      userId: userId ?? this.userId,
-      name: name ?? this.name,
-      email: email ?? this.email,
-      createdAt: createdAt ?? this.createdAt,
-    );
-  }
+  Map<String, dynamic> toMap() => {
+    'name': name,
+    'email': email,
+    'createdAt': Timestamp.fromDate(createdAt),
+  };
 }

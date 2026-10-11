@@ -30,10 +30,7 @@ class DefaultFirebaseOptions {
           'you can reconfigure this by running the FlutterFire CLI again.',
         );
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -71,5 +68,15 @@ class DefaultFirebaseOptions {
     projectId: 'cred-vault-6bf20',
     storageBucket: 'cred-vault-6bf20.firebasestorage.app',
     iosBundleId: 'com.example.credVault',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyDEsKZq3QgqVuAIWvrn-5uuJsElzXPMQjg',
+    appId: '1:819631877981:web:b6c5994304e9b6981d42b4',
+    messagingSenderId: '819631877981',
+    projectId: 'cred-vault-6bf20',
+    authDomain: 'cred-vault-6bf20.firebaseapp.com',
+    storageBucket: 'cred-vault-6bf20.firebasestorage.app',
+    measurementId: 'G-3YS3DNRFFT',
   );
 }

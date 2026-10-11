@@ -1,13 +1,15 @@
+import 'package:cred_vault/core/validators.dart';
 import 'package:cred_vault/providers/auth_provider.dart';
-import 'package:cred_vault/screens/home_screen.dart';
+import 'package:cred_vault/screens/register_screen.dart';
+import 'package:cred_vault/screens/splash_screen.dart';
 import 'package:cred_vault/theme/app_theme.dart';
+import 'package:cred_vault/widgets/app_logo.dart';
 import 'package:cred_vault/widgets/custom_button.dart';
 import 'package:cred_vault/widgets/custom_text_field.dart';
 import 'package:cred_vault/widgets/glass_container.dart';
 import 'package:cred_vault/widgets/snackbar_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,209 +18,156 @@ class LoginScreen extends StatefulWidget {
   State<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStateMixin {
+class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
-    );
-    _animationController.forward();
-  }
+  bool _obscure = true;
+  bool _loading = false;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _animationController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final error = await authProvider.login(
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-
-    if (!mounted) return;
-
-    if (error == null) {
-      SnackBarHelper.showSuccess(context, 'Login successful!');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+  Future<void> _signIn() async {
+    if (_loading || !(_formKey.currentState?.validate() ?? false)) return;
+    setState(() => _loading = true);
+    try {
+      // On success the app root notices the new session and moves on to the
+      // lock screen by itself.
+      await context.read<AuthProvider>().signIn(
+        email: _emailController.text,
+        password: _passwordController.text,
       );
-    } else {
-      SnackBarHelper.showError(context, error);
+    } on AuthFailure catch (e) {
+      if (mounted) SnackBarHelper.showError(context, e.message);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = await showDialog<String>(
+      context: context,
+      builder: (_) => _ResetPasswordDialog(initialEmail: _emailController.text),
+    );
+    if (email == null || !mounted) return;
+    try {
+      await context.read<AuthProvider>().sendPasswordReset(email);
+      if (mounted) {
+        SnackBarHelper.showSuccess(
+          context,
+          'If an account exists for $email, a reset link is on its way.',
+        );
+      }
+    } on AuthFailure catch (e) {
+      if (mounted) SnackBarHelper.showError(context, e.message);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.backgroundColor,
-              AppTheme.surfaceColor,
-              AppTheme.primaryColor.withOpacity(0.2),
-            ],
-          ),
-        ),
+      body: AppBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Form(
-                key: _formKey,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const SizedBox(height: 40),
-                    Hero(
-                      tag: 'logo',
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppTheme.primaryGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.5),
-                              blurRadius: 20,
-                              spreadRadius: 3,
+                    const Center(
+                      child: AppLogo(size: 104, glow: AppTheme.gold),
+                    ),
+                    const SizedBox(height: 22),
+                    const Center(child: BrandName(size: 34)),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sign in to your vault',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    GlassContainer(
+                      padding: const EdgeInsets.all(22),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          children: [
+                            CustomTextField(
+                              controller: _emailController,
+                              label: 'Email',
+                              prefixIcon: Icons.alternate_email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              autofillHints: const [AutofillHints.email],
+                              validator: Validators.email,
+                            ),
+                            const SizedBox(height: 16),
+                            CustomTextField(
+                              controller: _passwordController,
+                              label: 'Account password',
+                              prefixIcon: Icons.lock_outline_rounded,
+                              obscureText: _obscure,
+                              textInputAction: TextInputAction.done,
+                              autofillHints: const [AutofillHints.password],
+                              onSubmitted: (_) => _signIn(),
+                              validator: (v) => (v == null || v.isEmpty)
+                                  ? 'Please enter your password'
+                                  : null,
+                              suffixIcon: IconButton(
+                                tooltip: _obscure
+                                    ? 'Show password'
+                                    : 'Hide password',
+                                icon: Icon(
+                                  _obscure
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                ),
+                                onPressed: () =>
+                                    setState(() => _obscure = !_obscure),
+                              ),
+                            ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton(
+                                onPressed: _forgotPassword,
+                                child: const Text('Forgot password?'),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            CustomButton(
+                              text: 'Sign in',
+                              isLoading: _loading,
+                              onPressed: _signIn,
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.lock_rounded,
-                          size: 60,
-                          color: Colors.white,
-                        ),
                       ),
                     ),
-                    const SizedBox(height: 32),
-                    ShaderMask(
-                      shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                      child: const Text(
-                        'Welcome Back',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign in to continue',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 48),
-                    GlassContainer(
-                      child: Column(
-                        children: [
-                          CustomTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            prefixIcon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your password';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, _) {
-                        return CustomButton(
-                          text: 'Sign In',
-                          onPressed: authProvider.isLoading ? null : _handleLogin,
-                          isLoading: authProvider.isLoading,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 22),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          "Don't have an account? ",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                          ),
+                        const Text(
+                          'New to CredVault?',
+                          style: TextStyle(color: AppTheme.textSecondary),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const RegisterScreen(),
-                              ),
-                            );
-                          },
-                          child: ShaderMask(
-                            shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                            child: const Text(
-                              'Sign Up',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
+                        TextButton(
+                          onPressed: () => Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const RegisterScreen(),
                             ),
                           ),
+                          child: const Text('Create a vault'),
                         ),
                       ],
                     ),
@@ -229,6 +178,70 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ResetPasswordDialog extends StatefulWidget {
+  final String initialEmail;
+
+  const _ResetPasswordDialog({required this.initialEmail});
+
+  @override
+  State<_ResetPasswordDialog> createState() => _ResetPasswordDialogState();
+}
+
+class _ResetPasswordDialogState extends State<_ResetPasswordDialog> {
+  late final TextEditingController _email = TextEditingController(
+    text: widget.initialEmail.trim(),
+  );
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void dispose() {
+    _email.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Reset account password'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "We'll email you a link to reset your sign-in password. "
+              'This does not change your master password.',
+            ),
+            const SizedBox(height: 16),
+            CustomTextField(
+              controller: _email,
+              label: 'Email',
+              prefixIcon: Icons.alternate_email_rounded,
+              keyboardType: TextInputType.emailAddress,
+              validator: Validators.email,
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          onPressed: () {
+            if (_formKey.currentState!.validate()) {
+              Navigator.pop(context, _email.text.trim());
+            }
+          },
+          child: const Text('Send link'),
+        ),
+      ],
     );
   }
 }

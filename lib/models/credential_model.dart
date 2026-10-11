@@ -1,72 +1,112 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 
-class CredentialModel {
-  final String credId;
-  final String userId;
+import 'package:cred_vault/models/credential_category.dart';
+
+/// A saved login, as the user sees it (decrypted, in memory only).
+///
+/// On the server only an encrypted blob of these fields is stored, see
+/// [toPayload] and [Credential.fromPayload].
+class Credential {
+  final String id;
+
+  /// Name of the service picked from the list (e.g. `GitHub`).
   final String platform;
+
+  /// Optional custom name; mainly for the `Other` platform.
+  final String title;
   final String username;
   final String password;
   final String url;
+  final String notes;
+  final CredentialCategory category;
+  final bool favorite;
   final DateTime createdAt;
   final DateTime updatedAt;
 
-  CredentialModel({
-    required this.credId,
-    required this.userId,
+  /// When the password was last changed (drives the "old password" warning).
+  final DateTime passwordChangedAt;
+
+  const Credential({
+    required this.id,
     required this.platform,
+    this.title = '',
     required this.username,
     required this.password,
-    required this.url,
+    this.url = '',
+    this.notes = '',
+    this.category = CredentialCategory.other,
+    this.favorite = false,
     required this.createdAt,
     required this.updatedAt,
+    required this.passwordChangedAt,
   });
 
-  factory CredentialModel.fromFirestore(DocumentSnapshot doc) {
-    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-    return CredentialModel(
-      credId: data['credId'] ?? '',
-      userId: data['userId'] ?? '',
-      platform: data['platform'] ?? '',
-      username: data['username'] ?? '',
-      password: data['password'] ?? '',
-      url: data['url'] ?? '',
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp).toDate(),
-    );
-  }
+  /// What to show as the item's name.
+  String get displayName => title.trim().isNotEmpty ? title.trim() : platform;
 
-  Map<String, dynamic> toMap() {
-    return {
-      'credId': credId,
-      'userId': userId,
-      'platform': platform,
-      'username': username,
-      'password': password,
-      'url': url,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': Timestamp.fromDate(updatedAt),
-    };
-  }
-
-  CredentialModel copyWith({
-    String? credId,
-    String? userId,
+  Credential copyWith({
+    String? id,
     String? platform,
+    String? title,
     String? username,
     String? password,
     String? url,
+    String? notes,
+    CredentialCategory? category,
+    bool? favorite,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? passwordChangedAt,
+  }) => Credential(
+    id: id ?? this.id,
+    platform: platform ?? this.platform,
+    title: title ?? this.title,
+    username: username ?? this.username,
+    password: password ?? this.password,
+    url: url ?? this.url,
+    notes: notes ?? this.notes,
+    category: category ?? this.category,
+    favorite: favorite ?? this.favorite,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    passwordChangedAt: passwordChangedAt ?? this.passwordChangedAt,
+  );
+
+  /// The JSON that gets encrypted before it is stored.
+  String toPayload() => jsonEncode({
+    'platform': platform,
+    'title': title,
+    'username': username,
+    'password': password,
+    'url': url,
+    'notes': notes,
+    'category': category.name,
+    'favorite': favorite,
+    'passwordChangedAt': passwordChangedAt.toIso8601String(),
+  });
+
+  factory Credential.fromPayload(
+    String id,
+    String json, {
+    required DateTime createdAt,
+    required DateTime updatedAt,
   }) {
-    return CredentialModel(
-      credId: credId ?? this.credId,
-      userId: userId ?? this.userId,
-      platform: platform ?? this.platform,
-      username: username ?? this.username,
-      password: password ?? this.password,
-      url: url ?? this.url,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+    final map = jsonDecode(json) as Map<String, dynamic>;
+    return Credential(
+      id: id,
+      platform: map['platform'] as String? ?? 'Other',
+      title: map['title'] as String? ?? '',
+      username: map['username'] as String? ?? '',
+      password: map['password'] as String? ?? '',
+      url: map['url'] as String? ?? '',
+      notes: map['notes'] as String? ?? '',
+      category: CredentialCategory.fromName(map['category'] as String?),
+      favorite: map['favorite'] as bool? ?? false,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      passwordChangedAt:
+          DateTime.tryParse(map['passwordChangedAt'] as String? ?? '') ??
+          updatedAt,
     );
   }
 }

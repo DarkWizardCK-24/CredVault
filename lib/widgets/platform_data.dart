@@ -1,200 +1,161 @@
+import 'package:cred_vault/models/platform_catalog.dart';
+import 'package:cred_vault/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 
-class PlatformData {
-  final String name;
-  final IconData icon;
-  final Color color;
+/// A service's brand icon on a softly tinted rounded square.
+class PlatformAvatar extends StatelessWidget {
+  final String platform;
+  final double size;
 
-  PlatformData({
-    required this.name,
-    required this.icon,
-    required this.color,
-  });
+  const PlatformAvatar({super.key, required this.platform, this.size = 52});
+
+  @override
+  Widget build(BuildContext context) {
+    final info = PlatformCatalog.of(platform);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.3),
+        color: info.color.withValues(alpha: 0.14),
+        border: Border.all(color: info.color.withValues(alpha: 0.35)),
+      ),
+      child: Center(
+        child: FaIcon(info.icon, color: info.color, size: size * 0.44),
+      ),
+    );
+  }
 }
 
-class PlatformHelper {
-  static final Map<String, PlatformData> platforms = {
-    'Instagram': PlatformData(
-      name: 'Instagram',
-      icon: FontAwesomeIcons.instagram,
-      color: const Color(0xFFE4405F),
-    ),
-    'LinkedIn': PlatformData(
-      name: 'LinkedIn',
-      icon: FontAwesomeIcons.linkedin,
-      color: const Color(0xFF0A66C2),
-    ),
-    'GitHub': PlatformData(
-      name: 'GitHub',
-      icon: FontAwesomeIcons.github,
-      color: const Color(0xFF181717),
-    ),
-    'Gmail': PlatformData(
-      name: 'Gmail',
-      icon: FontAwesomeIcons.google,
-      color: const Color(0xFFEA4335),
-    ),
-    'Linktree': PlatformData(
-      name: 'Linktree',
-      icon: FontAwesomeIcons.link,
-      color: const Color(0xFF43E55E),
-    ),
-    'Facebook': PlatformData(
-      name: 'Facebook',
-      icon: FontAwesomeIcons.facebook,
-      color: const Color(0xFF1877F2),
-    ),
-    'Twitter': PlatformData(
-      name: 'Twitter',
-      icon: FontAwesomeIcons.twitter,
-      color: const Color(0xFF1DA1F2),
-    ),
-    'Discord': PlatformData(
-      name: 'Discord',
-      icon: FontAwesomeIcons.discord,
-      color: const Color(0xFF5865F2),
-    ),
-    'Spotify': PlatformData(
-      name: 'Spotify',
-      icon: FontAwesomeIcons.spotify,
-      color: const Color(0xFF1DB954),
-    ),
-    'Netflix': PlatformData(
-      name: 'Netflix',
-      icon: FontAwesomeIcons.film,
-      color: const Color(0xFFE50914),
-    ),
-    'Amazon': PlatformData(
-      name: 'Amazon',
-      icon: FontAwesomeIcons.amazon,
-      color: const Color(0xFFFF9900),
-    ),
-    'YouTube': PlatformData(
-      name: 'YouTube',
-      icon: FontAwesomeIcons.youtube,
-      color: const Color(0xFFFF0000),
-    ),
-    'TikTok': PlatformData(
-      name: 'TikTok',
-      icon: FontAwesomeIcons.tiktok,
-      color: const Color(0xFF000000),
-    ),
-    'Snapchat': PlatformData(
-      name: 'Snapchat',
-      icon: FontAwesomeIcons.snapchat,
-      color: const Color(0xFFFFFC00),
-    ),
-    'Reddit': PlatformData(
-      name: 'Reddit',
-      icon: FontAwesomeIcons.reddit,
-      color: const Color(0xFFFF4500),
-    ),
-    'Pinterest': PlatformData(
-      name: 'Pinterest',
-      icon: FontAwesomeIcons.pinterest,
-      color: const Color(0xFFE60023),
-    ),
-    'WhatsApp': PlatformData(
-      name: 'WhatsApp',
-      icon: FontAwesomeIcons.whatsapp,
-      color: const Color(0xFF25D366),
-    ),
-    'Telegram': PlatformData(
-      name: 'Telegram',
-      icon: FontAwesomeIcons.telegram,
-      color: const Color(0xFF26A5E4),
-    ),
-    'Slack': PlatformData(
-      name: 'Slack',
-      icon: FontAwesomeIcons.slack,
-      color: const Color(0xFF4A154B),
-    ),
-    'Zoom': PlatformData(
-      name: 'Zoom',
-      icon: FontAwesomeIcons.video,
-      color: const Color(0xFF2D8CFF),
-    ),
-    'Dropbox': PlatformData(
-      name: 'Dropbox',
-      icon: FontAwesomeIcons.dropbox,
-      color: const Color(0xFF0061FF),
-    ),
-    'Google Drive': PlatformData(
-      name: 'Google Drive',
-      icon: FontAwesomeIcons.googleDrive,
-      color: const Color(0xFF4285F4),
-    ),
-    'Microsoft': PlatformData(
-      name: 'Microsoft',
-      icon: FontAwesomeIcons.microsoft,
-      color: const Color(0xFF00A4EF),
-    ),
-    'Apple': PlatformData(
-      name: 'Apple',
-      icon: FontAwesomeIcons.apple,
-      color: const Color(0xFF000000),
-    ),
-    'PayPal': PlatformData(
-      name: 'PayPal',
-      icon: FontAwesomeIcons.paypal,
-      color: const Color(0xFF00457C),
-    ),
-    'Stripe': PlatformData(
-      name: 'Stripe',
-      icon: FontAwesomeIcons.stripe,
-      color: const Color(0xFF635BFF),
-    ),
-    'Steam': PlatformData(
-      name: 'Steam',
-      icon: FontAwesomeIcons.steam,
-      color: const Color(0xFF000000),
-    ),
-    'PlayStation': PlatformData(
-      name: 'PlayStation',
-      icon: FontAwesomeIcons.playstation,
-      color: const Color(0xFF003791),
-    ),
-    'Xbox': PlatformData(
-      name: 'Xbox',
-      icon: FontAwesomeIcons.xbox,
-      color: const Color(0xFF107C10),
-    ),
-    'Twitch': PlatformData(
-      name: 'Twitch',
-      icon: FontAwesomeIcons.twitch,
-      color: const Color(0xFF9146FF),
-    ),
-    'GitLab': PlatformData(
-      name: 'GitLab',
-      icon: FontAwesomeIcons.gitlab,
-      color: const Color(0xFFFC6D26),
-    ),
-    'Skype': PlatformData(
-      name: 'Skype',
-      icon: FontAwesomeIcons.skype,
-      color: const Color(0xFF00AFF0),
-    ),
-    'Other': PlatformData(
-      name: 'Other',
-      icon: FontAwesomeIcons.lock,
-      color: const Color(0xFF6C63FF),
-    ),
-  };
+/// Bottom sheet with a searchable grid of services. Returns the chosen name.
+Future<String?> showPlatformPicker(BuildContext context, {String? selected}) {
+  return showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    builder: (_) => _PlatformPicker(selected: selected),
+  );
+}
 
-  static List<String> getPlatformNames() {
-    return platforms.keys.toList();
-  }
+class _PlatformPicker extends StatefulWidget {
+  final String? selected;
 
-  static PlatformData getPlatformData(String platformName) {
-    return platforms[platformName] ?? platforms['Other']!;
-  }
+  const _PlatformPicker({this.selected});
 
-  static IconData getIcon(String platformName) {
-    return platforms[platformName]?.icon ?? FontAwesomeIcons.lock;
-  }
+  @override
+  State<_PlatformPicker> createState() => _PlatformPickerState();
+}
 
-  static Color getColor(String platformName) {
-    return platforms[platformName]?.color ?? const Color(0xFF6C63FF);
+class _PlatformPickerState extends State<_PlatformPicker> {
+  String _query = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final q = _query.trim().toLowerCase();
+    final platforms = PlatformCatalog.all
+        .where((p) => q.isEmpty || p.name.toLowerCase().contains(q))
+        .toList();
+
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.8,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, controller) => Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Choose a service',
+                style: TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: TextField(
+              onChanged: (v) => setState(() => _query = v),
+              decoration: const InputDecoration(
+                hintText: 'Search services',
+                prefixIcon: Icon(Icons.search_rounded),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: platforms.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No match - pick "Other" to name it yourself',
+                      style: TextStyle(color: AppTheme.textSecondary),
+                    ),
+                  )
+                : GridView.builder(
+                    controller: controller,
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          mainAxisExtent: 104,
+                        ),
+                    itemCount: platforms.length,
+                    itemBuilder: (context, i) {
+                      final p = platforms[i];
+                      final isSelected = p.name == widget.selected;
+                      return InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => Navigator.pop(context, p.name),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(18),
+                            color: isSelected
+                                ? AppTheme.gold.withValues(alpha: 0.12)
+                                : AppTheme.surfaceHigh.withValues(alpha: 0.6),
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppTheme.gold
+                                  : AppTheme.border,
+                              width: isSelected ? 1.6 : 1,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              PlatformAvatar(platform: p.name, size: 44),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                ),
+                                child: Text(
+                                  p.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
   }
 }

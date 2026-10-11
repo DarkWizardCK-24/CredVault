@@ -1,10 +1,13 @@
+import 'package:cred_vault/core/password/password_strength.dart';
+import 'package:cred_vault/core/validators.dart';
 import 'package:cred_vault/providers/auth_provider.dart';
-import 'package:cred_vault/screens/home_screen.dart';
+import 'package:cred_vault/providers/vault_provider.dart';
 import 'package:cred_vault/theme/app_theme.dart';
 import 'package:cred_vault/widgets/custom_button.dart';
 import 'package:cred_vault/widgets/custom_text_field.dart';
 import 'package:cred_vault/widgets/glass_container.dart';
 import 'package:cred_vault/widgets/snackbar_helper.dart';
+import 'package:cred_vault/widgets/strength_meter.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -15,270 +18,306 @@ class RegisterScreen extends StatefulWidget {
   State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
-class _RegisterScreenState extends State<RegisterScreen> with SingleTickerProviderStateMixin {
+class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _accountPassword = TextEditingController();
+  final _master = TextEditingController();
+  final _masterConfirm = TextEditingController();
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
-    );
-    _animationController.forward();
-  }
+  bool _obscureAccount = true;
+  bool _obscureMaster = true;
+  bool _understood = false;
+  bool _loading = false;
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
-    _animationController.dispose();
+    _name.dispose();
+    _email.dispose();
+    _accountPassword.dispose();
+    _master.dispose();
+    _masterConfirm.dispose();
     super.dispose();
   }
 
-  void _handleRegister() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final error = await authProvider.register(
-      name: _nameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-    );
-
-    if (!mounted) return;
-
-    if (error == null) {
-      SnackBarHelper.showSuccess(context, 'Registration successful!');
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+  Future<void> _register() async {
+    if (_loading) return;
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    if (!_understood) {
+      SnackBarHelper.showError(
+        context,
+        'Please confirm that you understand the master password cannot be recovered.',
       );
-    } else {
-      SnackBarHelper.showError(context, error);
+      return;
+    }
+    setState(() => _loading = true);
+
+    final vault = context.read<VaultProvider>();
+    final auth = context.read<AuthProvider>();
+    final navigator = Navigator.of(context);
+    try {
+      await vault.registerAccount(
+        auth: auth,
+        name: _name.text,
+        email: _email.text,
+        accountPassword: _accountPassword.text,
+        masterPassword: _master.text,
+      );
+      // The app root now shows the unlocked vault; drop this screen.
+      navigator.popUntil((route) => route.isFirst);
+    } on AuthFailure catch (e) {
+      if (mounted) SnackBarHelper.showError(context, e.message);
+    } catch (e) {
+      if (mounted) {
+        SnackBarHelper.showError(
+          context,
+          "We couldn't finish creating your vault. Please try again.",
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
+  Widget _visibilityToggle(bool obscure, VoidCallback onTap) => IconButton(
+    tooltip: obscure ? 'Show password' : 'Hide password',
+    icon: Icon(
+      obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+    ),
+    onPressed: onTap,
+  );
+
   @override
   Widget build(BuildContext context) {
+    final strength = PasswordStrengthEstimator.evaluate(_master.text);
+
     return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              AppTheme.backgroundColor,
-              AppTheme.surfaceColor,
-              AppTheme.primaryColor.withOpacity(0.2),
-            ],
-          ),
-        ),
+      appBar: AppBar(title: const Text('Create your vault')),
+      body: AppBackground(
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: FadeTransition(
-              opacity: _fadeAnimation,
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 20),
-                    Hero(
-                      tag: 'logo',
-                      child: Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: AppTheme.primaryGradient,
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppTheme.primaryColor.withOpacity(0.5),
-                              blurRadius: 20,
-                              spreadRadius: 3,
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const _SectionLabel(
+                        icon: Icons.person_outline_rounded,
+                        title: 'Your account',
+                        subtitle: 'Used to sign in on any device.',
+                      ),
+                      GlassContainer(
+                        child: Column(
+                          children: [
+                            CustomTextField(
+                              controller: _name,
+                              label: 'Full name',
+                              prefixIcon: Icons.badge_outlined,
+                              textCapitalization: TextCapitalization.words,
+                              textInputAction: TextInputAction.next,
+                              validator: (v) => Validators.required(
+                                v,
+                                'Please enter your name',
+                              ),
+                            ),
+                            const SizedBox(height: 14),
+                            CustomTextField(
+                              controller: _email,
+                              label: 'Email',
+                              prefixIcon: Icons.alternate_email_rounded,
+                              keyboardType: TextInputType.emailAddress,
+                              textInputAction: TextInputAction.next,
+                              validator: Validators.email,
+                            ),
+                            const SizedBox(height: 14),
+                            CustomTextField(
+                              controller: _accountPassword,
+                              label: 'Account password',
+                              prefixIcon: Icons.lock_outline_rounded,
+                              obscureText: _obscureAccount,
+                              textInputAction: TextInputAction.next,
+                              validator: Validators.accountPassword,
+                              suffixIcon: _visibilityToggle(
+                                _obscureAccount,
+                                () => setState(
+                                  () => _obscureAccount = !_obscureAccount,
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.person_add_rounded,
-                          size: 50,
-                          color: Colors.white,
+                      ),
+                      const SizedBox(height: 28),
+                      const _SectionLabel(
+                        icon: Icons.shield_moon_outlined,
+                        title: 'Your master password',
+                        subtitle:
+                            'Encrypts everything in your vault. It never leaves '
+                            'this device.',
+                      ),
+                      GlassContainer(
+                        child: Column(
+                          children: [
+                            CustomTextField(
+                              controller: _master,
+                              label: 'Master password',
+                              prefixIcon: Icons.key_rounded,
+                              obscureText: _obscureMaster,
+                              textInputAction: TextInputAction.next,
+                              onChanged: (_) => setState(() {}),
+                              validator: Validators.masterPassword,
+                              suffixIcon: _visibilityToggle(
+                                _obscureMaster,
+                                () => setState(
+                                  () => _obscureMaster = !_obscureMaster,
+                                ),
+                              ),
+                            ),
+                            if (_master.text.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              StrengthMeter(strength: strength),
+                            ],
+                            const SizedBox(height: 14),
+                            CustomTextField(
+                              controller: _masterConfirm,
+                              label: 'Confirm master password',
+                              prefixIcon: Icons.key_rounded,
+                              obscureText: _obscureMaster,
+                              textInputAction: TextInputAction.done,
+                              validator: Validators.matches(
+                                () => _master.text,
+                                'The master passwords do not match',
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 24),
-                    ShaderMask(
-                      shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                      child: const Text(
-                        'Create Account',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warning.withValues(alpha: 0.10),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: AppTheme.warning.withValues(alpha: 0.35),
+                          ),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.warning_amber_rounded,
+                              color: AppTheme.warning,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            const Expanded(
+                              child: Text(
+                                'Nobody can recover your master password - not '
+                                'even us. If you forget it, your saved '
+                                'credentials cannot be decrypted.',
+                                style: TextStyle(
+                                  color: AppTheme.textPrimary,
+                                  fontSize: 13,
+                                  height: 1.45,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Sign up to get started',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white.withOpacity(0.7),
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    GlassContainer(
-                      child: Column(
-                        children: [
-                          CustomTextField(
-                            controller: _nameController,
-                            label: 'Full Name',
-                            prefixIcon: Icons.person_outline,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your name';
-                              }
-                              if (value.length < 3) {
-                                return 'Name must be at least 3 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _emailController,
-                            label: 'Email',
-                            prefixIcon: Icons.email_outlined,
-                            keyboardType: TextInputType.emailAddress,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _passwordController,
-                            label: 'Password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscurePassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter a password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _confirmPasswordController,
-                            label: 'Confirm Password',
-                            prefixIcon: Icons.lock_outline,
-                            obscureText: _obscureConfirmPassword,
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscureConfirmPassword = !_obscureConfirmPassword;
-                                });
-                              },
-                            ),
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please confirm your password';
-                              }
-                              if (value != _passwordController.text) {
-                                return 'Passwords do not match';
-                              }
-                              return null;
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    Consumer<AuthProvider>(
-                      builder: (context, authProvider, _) {
-                        return CustomButton(
-                          text: 'Sign Up',
-                          onPressed: authProvider.isLoading ? null : _handleRegister,
-                          isLoading: authProvider.isLoading,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account? ",
+                      CheckboxListTile(
+                        contentPadding: EdgeInsets.zero,
+                        controlAffinity: ListTileControlAffinity.leading,
+                        value: _understood,
+                        activeColor: AppTheme.gold,
+                        checkColor: AppTheme.background,
+                        onChanged: (v) =>
+                            setState(() => _understood = v ?? false),
+                        title: const Text(
+                          'I understand and have saved it somewhere safe',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
+                            color: AppTheme.textSecondary,
+                            fontSize: 13.5,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.of(context).pop();
-                          },
-                          child: ShaderMask(
-                            shaderCallback: (bounds) => AppTheme.primaryGradient.createShader(bounds),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const SizedBox(height: 12),
+                      CustomButton(
+                        text: 'Create vault',
+                        icon: Icons.lock_rounded,
+                        isLoading: _loading,
+                        onPressed: _register,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _SectionLabel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12, left: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+              color: AppTheme.gold.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppTheme.gold, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppTheme.textSecondary,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

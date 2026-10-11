@@ -1,36 +1,28 @@
+import 'package:cred_vault/app.dart';
+import 'package:cred_vault/core/password/breach_checker.dart';
 import 'package:cred_vault/firebase_options.dart';
-import 'package:cred_vault/theme/app_theme.dart';
-import 'package:flutter/material.dart';
+import 'package:cred_vault/providers/auth_provider.dart';
+import 'package:cred_vault/providers/vault_provider.dart';
+import 'package:cred_vault/services/settings_service.dart';
+import 'package:cred_vault/services/vault_repository.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-import 'screens/splash_screen.dart';
-import 'providers/auth_provider.dart';
-import 'providers/credential_provider.dart';
+import 'package:flutter/material.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(const MyApp());
-}
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  final settings = SettingsService();
+  await settings.load();
 
-  @override
-  Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => CredentialProvider()),
-      ],
-      child: MaterialApp(
-        title: 'CredVault',
-        debugShowCheckedModeBanner: false,
-        theme: AppTheme.darkTheme,
-        home: const SplashScreen(),
+  runApp(
+    CredVaultApp(
+      auth: FirebaseAuthProvider(),
+      vault: VaultProvider(
+        repository: FirestoreVaultRepository(),
+        breachChecker: HibpBreachChecker(),
       ),
-    );
-  }
+      settings: settings,
+    ),
+  );
 }

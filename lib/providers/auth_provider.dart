@@ -1,151 +1,161 @@
-import 'package:cred_vault/models/user_model.dart';
-import 'package:flutter/material.dart';
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
-class AuthProvider extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
-  User? _user;
-  UserModel? _userModel;
-  bool _isLoading = false;
+/// An authentication error with a message that is safe to show to the user.
+class AuthFailure implements Exception {
+  final String code;
+  final String message;
 
-  User? get user => _user;
-  UserModel? get userModel => _userModel;
-  bool get isLoading => _isLoading;
-  bool get isAuthenticated => _user != null;
+  const AuthFailure(this.code, this.message);
 
-  AuthProvider() {
-    _auth.authStateChanges().listen((User? user) {
-      _user = user;
-      if (user != null) {
-        _loadUserData();
-      } else {
-        _userModel = null;
-      }
+  factory AuthFailure.fromCode(String code) {
+    switch (code) {
+      // Newer Firebase versions report every bad sign-in as invalid-credential.
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+      case 'invalid-login-credentials':
+        return AuthFailure(code, 'Incorrect email or password.');
+      case 'invalid-email':
+        return AuthFailure(code, 'That email address does not look right.');
+      case 'user-disabled':
+        return AuthFailure(code, 'This account has been disabled.');
+      case 'email-already-in-use':
+        return AuthFailure(code, 'An account with this email already exists.');
+      case 'weak-password':
+        return AuthFailure(code, 'Please choose a stronger account password.');
+      case 'too-many-requests':
+        return AuthFailure(code, 'Too many attempts. Please try again later.');
+      case 'network-request-failed':
+        return AuthFailure(code, 'No internet connection. Please try again.');
+      case 'requires-recent-login':
+        return AuthFailure(code, 'Please sign in again to do that.');
+      default:
+        return AuthFailure(code, 'Something went wrong. Please try again.');
+    }
+  }
+
+  @override
+  String toString() => message;
+}
+
+/// Account sign-in (not the vault: that is unlocked with the master password).
+abstract class AuthProvider extends ChangeNotifier {
+  /// `false` until Firebase has reported the initial sign-in state.
+  bool get initialized;
+
+  /// Firebase uid of the signed-in user, or `null`.
+  String? get userId;
+  String? get email;
+  bool get isSignedIn => userId != null;
+
+  Future<void> signIn({required String email, required String password});
+
+  /// Creates an account and returns its uid.
+  Future<String> signUp({required String email, required String password});
+
+  Future<void> signOut();
+
+  Future<void> sendPasswordReset(String email);
+
+  /// Confirms the signed-in user's account [password].
+  Future<void> reauthenticate(String password);
+
+  /// Permanently deletes the signed-in account (call [reauthenticate] first).
+  Future<void> deleteAccount();
+
+  /// Removes an account that was just created, to roll back a failed signup.
+  Future<void> discardCurrentAccount();
+}
+
+class FirebaseAuthProvider extends AuthProvider {
+  FirebaseAuthProvider({FirebaseAuth? auth})
+    : _auth = auth ?? FirebaseAuth.instance {
+    _subscription = _auth.authStateChanges().listen((_) {
+      _initialized = true;
       notifyListeners();
     });
   }
 
-  Future<void> _loadUserData() async {
-    if (_user == null) return;
-    
+  final FirebaseAuth _auth;
+  late final StreamSubscription<User?> _subscription;
+  bool _initialized = false;
+
+  @override
+  bool get initialized => _initialized;
+
+  @override
+  String? get userId => _auth.currentUser?.uid;
+
+  @override
+  String? get email => _auth.currentUser?.email;
+
+  Future<T> _guard<T>(Future<T> Function() action) async {
     try {
-      DocumentSnapshot doc = await _firestore
-          .collection('users')
-          .doc(_user!.uid)
-          .get();
-      
-      if (doc.exists) {
-        _userModel = UserModel.fromFirestore(doc);
-        notifyListeners();
-      }
-    } catch (e) {
-      print('Error loading user data: $e');
-    }
-  }
-
-  Future<String?> register({
-    required String name,
-    required String email,
-    required String password,
-  }) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      // Create user with email and password
-      UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      // Generate unique user ID
-      int userCount = await _getUserCount();
-      String userId = 'USER${(userCount + 1).toString().padLeft(6, '0')}';
-
-      // Create user document
-      UserModel newUser = UserModel(
-        userId: userId,
-        name: name,
-        email: email,
-        createdAt: DateTime.now(),
-      );
-
-      await _firestore
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .set(newUser.toMap());
-
-      _userModel = newUser;
-      _isLoading = false;
-      notifyListeners();
-      return null;
+      return await action();
     } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return e.message ?? 'Registration failed';
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return 'An error occurred: $e';
+      debugPrint('Auth error: ${e.code}');
+      throw AuthFailure.fromCode(e.code);
     }
   }
 
-  Future<String?> login({
-    required String email,
-    required String password,
-  }) async {
-    try {
-      _isLoading = true;
-      notifyListeners();
-
-      await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+  @override
+  Future<void> signIn({required String email, required String password}) =>
+      _guard(
+        () => _auth.signInWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        ),
       );
 
-      _isLoading = false;
-      notifyListeners();
-      return null;
-    } on FirebaseAuthException catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return e.message ?? 'Login failed';
-    } catch (e) {
-      _isLoading = false;
-      notifyListeners();
-      return 'An error occurred: $e';
-    }
-  }
-
-  Future<void> logout() async {
-    await _auth.signOut();
-    _userModel = null;
-    notifyListeners();
-  }
-
-  Future<String?> updateProfile({
-    required String name,
-  }) async {
-    try {
-      if (_user == null) return 'User not authenticated';
-
-      await _firestore.collection('users').doc(_user!.uid).update({
-        'name': name,
+  @override
+  Future<String> signUp({required String email, required String password}) =>
+      _guard(() async {
+        final credential = await _auth.createUserWithEmailAndPassword(
+          email: email.trim(),
+          password: password,
+        );
+        return credential.user!.uid;
       });
 
-      _userModel = _userModel?.copyWith(name: name);
-      notifyListeners();
-      return null;
-    } catch (e) {
-      return 'Failed to update profile: $e';
+  @override
+  Future<void> signOut() => _auth.signOut();
+
+  @override
+  Future<void> sendPasswordReset(String email) =>
+      _guard(() => _auth.sendPasswordResetEmail(email: email.trim()));
+
+  @override
+  Future<void> reauthenticate(String password) => _guard(() async {
+    final user = _auth.currentUser;
+    final address = user?.email;
+    if (user == null || address == null) {
+      throw FirebaseAuthException(code: 'requires-recent-login');
+    }
+    await user.reauthenticateWithCredential(
+      EmailAuthProvider.credential(email: address, password: password),
+    );
+  });
+
+  @override
+  Future<void> deleteAccount() =>
+      _guard(() async => _auth.currentUser?.delete());
+
+  @override
+  Future<void> discardCurrentAccount() async {
+    try {
+      await _auth.currentUser?.delete();
+    } on FirebaseAuthException catch (e) {
+      debugPrint('Could not discard account: ${e.code}');
+      await _auth.signOut();
     }
   }
 
-  Future<int> _getUserCount() async {
-    QuerySnapshot snapshot = await _firestore.collection('users').get();
-    return snapshot.docs.length;
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 }
