@@ -25,18 +25,23 @@ class StrengthMeter extends StatelessWidget {
   final bool showHints;
   final bool showCrackTime;
 
+  /// Shows the raw entropy estimate in bits next to the strength label.
+  final bool showEntropy;
+
   const StrengthMeter({
     super.key,
     required this.strength,
     this.showHints = true,
     this.showCrackTime = true,
+    this.showEntropy = true,
   });
 
   @override
   Widget build(BuildContext context) {
     final color = strengthColor(strength.level);
     return Semantics(
-      label: 'Password strength: ${strength.level.label}',
+      label: 'Password strength: ${strength.level.label}'
+          '${showEntropy && strength.bits > 0 ? ', ${strength.bits.toStringAsFixed(1)} bits of entropy' : ''}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -70,13 +75,32 @@ class StrengthMeter extends StatelessWidget {
                   fontSize: 13,
                 ),
               ),
+              if (showEntropy && strength.bits > 0) ...[
+                const SizedBox(width: 8),
+                Tooltip(
+                  message: 'Estimated entropy (after pattern penalties)',
+                  child: Text(
+                    '${strength.bits.toStringAsFixed(1)} bits',
+                    style: const TextStyle(
+                      fontFamily: 'IBMPlexMono',
+                      color: AppTheme.textSecondary,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
               if (showCrackTime && strength.bits > 0) ...[
-                const Spacer(),
-                Text(
-                  'Cracked in ${strength.crackTime}',
-                  style: const TextStyle(
-                    color: AppTheme.textMuted,
-                    fontSize: 12,
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Cracked in ${strength.crackTime}',
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
